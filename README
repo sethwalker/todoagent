@@ -1,0 +1,9 @@
+Todo:Agent
+
+A todo app accessed via LLM
+also
+An app on it's way to becoming agentic (todo!)
+
+python index.py "add buy milk to my grocery list"
+python index.py "add a todo for organizing my todos"
+python index.py "what's the most urgent thing for me to do?"
