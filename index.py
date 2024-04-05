@@ -2,41 +2,36 @@ from langchain_openai import ChatOpenAI
 from langchain_community.utilities import SQLDatabase
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_community.agent_toolkits import create_sql_agent
+
 
 # requires OPENAI_API_KEY env var to be set
-llm = ChatOpenAI()
+llm = ChatOpenAI(model="gpt-4", temperature=0)
 
 db = SQLDatabase.from_uri("sqlite:///agent.db")
 
-system = """You are a frontend to a todo app
-You will receive messages from a user requesting to add, update, or remove
-todo items from their various lists, and to retrieve todo items.
+# ).partial(dialect=db.dialect, dbcontext=db.get_context(), top_k=3)
 
-You are a {dialect} SQL expert. Given an input question, creat a syntactically correct {dialect} query to run.
+agent_executor = create_sql_agent(llm, db=db, agent_type="openai-tools", verbose=True)
 
-Write an initial draft of the query. Then double check the {dialect} query for common mistakes, including:
-- Using NOT IN with NULL values
-- Using UNION when UNION ALL should have been used
-- Using BETWEEN for exclusive ranges
-- Data type mismatch in predicates
-- Properly quoting identifiers
-- Using the correct number of arguments for functions
-- Casting to the correct data type
-- Using the proper columns for joins
+agent_executor.invoke(
+    """
+    You have permission to create and alter tables.
+    Execute any necessary SQL to accomplish this task in the context of a todo app,
+    including creating or altering tables.
+    Break queries down into subqueries if appropriate.
+    Add comments to all queries to explain what they are doing.
+    Write and execute a final query that confirms that the expected change has happened.
 
-The existing database contains the following context:
-<context>
-{dbcontext}
-</context>
-
-Annotate the SQL with {dialect} valid comments to explain what you're doing.
-
-Output the final query SQL only."""
-prompt = ChatPromptTemplate.from_messages(
-    [("system", system), ("human", "{query}")]
-).partial(dialect=db.dialect, dbcontext=db.get_context(), top_k=3)
+    <task>
+    remind me to show this to alix asap
+    </task>
+    """
+)
 
 output_parser = StrOutputParser()
+
+exit()
 
 chain = prompt | llm | output_parser
 
